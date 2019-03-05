@@ -1,0 +1,1 @@
+from nongkrong.render import render
