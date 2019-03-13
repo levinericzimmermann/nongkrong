@@ -27,9 +27,9 @@ class Genesis(object):
         try:
             assert len(self.__primes) == len(set(self.__primes))
         except AssertionError:
-            raise ValueError(
-                "Each input value has to be unique. Repetitions are not allowed!"
-            )
+            msg = "Each input value has to be unique. "
+            msg += "Repetitions are not allowed!"
+            raise ValueError(msg)
 
         self.__raw_modes = Genesis.__mk_modes(self.__primes)
         self.__modes = Genesis.__mk_dict(self.__raw_modes, lambda m, gen_modes: m)

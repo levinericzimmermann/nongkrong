@@ -5,12 +5,12 @@ from nongkrong.harmony import modes
 
 class ModeTest(unittest.TestCase):
     def test_attributes(self):
-        x, y, z, N, gender = (3, 5, 7, 9, True)
-        mode = modes.Mode(x, y, z, N, True)
+        x, y, z, U, gender = (3, 5, 7, 9, True)
+        mode = modes.Mode(x, y, z, U, True)
         self.assertEqual(mode.x, x)
         self.assertEqual(mode.y, y)
         self.assertEqual(mode.z, z)
-        self.assertEqual(mode.N, N)
+        self.assertEqual(mode.U, U)
         self.assertEqual(mode.gender, gender)
         self.assertEqual(repr(mode), "{0}+{1}+{2}".format(x, y, z))
 

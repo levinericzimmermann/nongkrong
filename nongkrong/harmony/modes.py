@@ -6,12 +6,12 @@ class Mode(object):
     every Mode has a gender (True or False, ^+1 vs ^-1).
     """
 
-    def __init__(self, x, y, z, N, gender=True):
-        for p in (x, y, z, N):
+    def __init__(self, x, y, z, U, gender=True):
+        for p in (x, y, z, U):
             try:
                 assert type(p) == int
             except AssertionError:
-                raise TypeError("X, Y, Z and N has to be integer.")
+                raise TypeError("X, Y, Z and U has to be integer.")
 
         try:
             assert type(gender) == bool
@@ -21,7 +21,7 @@ class Mode(object):
         self.__x = x
         self.__y = y
         self.__z = z
-        self.__N = N
+        self.__U = U
         self.__gender = gender
 
     @property
@@ -37,8 +37,8 @@ class Mode(object):
         return int(self.__z)
 
     @property
-    def N(self) -> int:
-        return int(self.__N)
+    def U(self) -> int:
+        return int(self.__U)
 
     @property
     def gender(self) -> bool:

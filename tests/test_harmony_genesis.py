@@ -1,21 +1,29 @@
 import unittest
 
-from nongkrong.harmony import modes
+from nongkrong.harmony import genesis
 
 
 class ModeTest(unittest.TestCase):
     def test_attributes(self):
-        x, y, z, N, gender = (3, 5, 7, 9, True)
-        mode = modes.Mode(x, y, z, N, True)
-        self.assertEqual(mode.x, x)
-        self.assertEqual(mode.y, y)
-        self.assertEqual(mode.z, z)
-        self.assertEqual(mode.N, N)
-        self.assertEqual(mode.gender, gender)
-        self.assertEqual(repr(mode), "{0}+{1}+{2}".format(x, y, z))
+        a, b, c, d = (3, 5, 7, 9)
+        gen = genesis.Genesis(a, b, c, d)
+        mode0_key = "3+5+7"
+        mode0_parallel_key = "3+5+9"
+        mode0_left_neighbour_key = "5+3+7"
+        mode0_right_neighbour_key = "3+7+5"
+        mode0_opposite_key = "3-5-7"
+        mode0 = gen.mode(mode0_key)
+        mode0_parallel = gen.parallel(mode0)
+        mode0_left_neighbour = gen.left_neighbour(mode0)
+        mode0_right_neighbour = gen.right_neighbour(mode0)
+        mode0_opposite = gen.opposite(mode0)
+        self.assertEqual(repr(mode0), mode0_key)
+        self.assertEqual(mode0, gen.mode(mode0))
+        self.assertEqual(mode0_parallel, gen.mode(mode0_parallel_key))
+        self.assertEqual(mode0_left_neighbour, gen.mode(mode0_left_neighbour_key))
+        self.assertEqual(mode0_right_neighbour, gen.mode(mode0_right_neighbour_key))
+        self.assertEqual(mode0_opposite, gen.mode(mode0_opposite_key))
 
     def test_false_init(self):
-        with self.assertRaises(TypeError):
-            modes.Mode(1.3, "hi", 4, 3, True)
-        with self.assertRaises(TypeError):
-            modes.Mode(3, 5, 7, 9, "HI")
+        with self.assertRaises(ValueError):
+            genesis.Genesis(7, 5, 7, 9)  # not unique
