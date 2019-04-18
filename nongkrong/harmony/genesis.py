@@ -21,7 +21,7 @@ class Genesis(object):
             * "a-b-c" for negative modes
     """
 
-    def __init__(self, a, b, c, d) -> None:
+    def __init__(self, a, b, c, d, concert_pitch: float = 250) -> None:
         self.__primes = tuple(sorted((a, b, c, d)))
 
         try:
@@ -41,13 +41,18 @@ class Genesis(object):
             self.__raw_modes, Genesis.__detect_right_neighbour
         )
         self.__opposite = Genesis.__mk_dict(self.__raw_modes, Genesis.__detect_opposite)
+        self.__concert_pitch = concert_pitch
 
     @property
     def __key(self) -> tuple:
-        return tuple(self.__primes)
+        return tuple(self.__primes + (self.concert_pitch,))
+
+    @property
+    def concert_pitch(self) -> float:
+        return self.__concert_pitch
 
     def __repr__(self) -> str:
-        return str("GENESIS: {0}|{1}|{2}|{3}".format(*self.__key))
+        return str("GENESIS: {0}|{1}|{2}|{3} ({4})".format(*self.__key))
 
     @staticmethod
     def __mk_modes(primes) -> tuple:

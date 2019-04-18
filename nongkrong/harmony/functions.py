@@ -22,7 +22,7 @@ U is the fourth prime number, that is not part of the current mode.
 Each of the inner functions (o, w, m) can be played simultanously with the GONG.
 In this case they are written in upper letters (O, W, M).
 
-Additionaly every function has two side-functions. Those sidefunctions
+Additionaly every function has two sidefunctions. Those sidefunctions
 have the form a/b or b/a. They are named after their mother function
 plus the prime number, that remains stable.
 For instance:
@@ -36,7 +36,7 @@ class Function(object):
     """Harmonic function, descriped by the two prime numbers it contains.
 
     A harmonic function can be played with or without the gong.
-    Every harmonic function has so side-functions.
+    Every harmonic function has two sidefunctions.
     """
 
     def __init__(self, name: str, key, gong: bool) -> None:
@@ -46,6 +46,17 @@ class Function(object):
 
     def __repr__(self) -> str:
         return self.__name
+
+    def __eq__(self, other) -> bool:
+        try:
+            tests = (
+                self.gong == other.gong,
+                self.__key == other.__key,
+                type(self) == type(other),
+            )
+            return all(tests)
+        except AttributeError:
+            return False
 
     @property
     def gong(self) -> bool:
@@ -97,29 +108,43 @@ class Identifier(object):
         """Return the relevant prime numbers from the mode."""
         return tuple(getattr(mode, identity) for identity in self.__identifier)
 
+    def __eq__(self, other) -> bool:
+        try:
+            return self.identifier == other.identifier
+        except AttributeError:
+            return False
 
-__FUNC_NAME_AND_IDENTIFIER = (
-    ("m", "y", "z"),  # tonica
-    ("w", "x", "z"),  # subdominant
-    ("o", "x", "y"),  # dominant
-    ("n", "U", "z"),
-    ("om", "U", "y"),
-    ("ow", "U", "x"),
-)
 
-for __information in __FUNC_NAME_AND_IDENTIFIER:
-    __name, __p0, __p1 = __information
-    __name_sf0 = __name + __p0
-    __name_sf1 = __name + __p1
-    __identifier = Identifier(__p0, __p1)
-    __identifier_sf1 = Identifier(__p1, __p0)
-    __to_update = {
-        __name: Function(__name, __identifier, False),
-        __name_sf0: SideFunction(__name_sf0, __identifier),
-        __name_sf1: SideFunction(__name_sf1, __identifier_sf1),
-    }
-    if __name in ("m", "w", "o"):
-        __to_update.update(
-            {__name.upper(): Function(__name.upper(), __identifier, True)}
-        )
-    globals().update(__to_update)
+def __init_functions():
+    func_name_and_identifier = (
+        ("m", "y", "z"),  # tonica
+        ("w", "x", "z"),  # subdominant
+        ("o", "x", "y"),  # dominant
+        ("n", "U", "z"),
+        ("om", "U", "y"),
+        ("ow", "U", "x"),
+    )
+
+    functions = {}
+
+    for information in func_name_and_identifier:
+        name, p0, p1 = information
+        name_sf0 = name + p0
+        name_sf1 = name + p1
+        identifier = Identifier(p0, p1)
+        identifier_sf1 = Identifier(p1, p0)
+        to_update = {
+            name: Function(name, identifier, False),
+            name_sf0: SideFunction(name_sf0, identifier),
+            name_sf1: SideFunction(name_sf1, identifier_sf1),
+        }
+        if name in ("m", "w", "o"):
+            to_update.update(
+                {name.upper(): Function(name.upper(), identifier, True)}
+            )
+        FUNCTIONS.update(to_update)
+
+    return functions
+
+
+FUNCTIONS = __init_functions()
