@@ -73,3 +73,33 @@ class SectionMaker(abc.ABC):
 
     def get_nth_pitch(self, player, pitch):
         pass
+
+
+class MDC(object):
+    """"Metre-divided Cadence (MDC)
+    """
+
+    def __init__(self, cadence, time_flow, time_lv=0):
+        try:
+            assert time_lv in (0, 1, 2, 3)
+        except AssertionError:
+            msg = "time_lv has to be 0 (element), 1 (unit),  2 (compound) or 3 (metre)."
+            raise ValueError(msg)
+
+        try:
+            real = sum(cadence.delay)
+            if time_lv == 0:
+                expected = time_flow.size
+            elif time_lv == 1:
+                expected = time_flow.amount_units
+            elif time_lv == 2:
+                expected = time_flow.amount_compounds
+            elif time_lv == 3:
+                expected = len(time_flow)
+            assert real == expected
+        except AssertionError:
+            msg = "Cadence has to be as long as the respective TimeFLow - object."
+            msg += " Cadence duration: {0}. Expected duration {1}.".format(
+                real, expected
+            )
+            raise ValueError(msg)

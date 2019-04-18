@@ -4,33 +4,12 @@ class TimeFlow(object):
         pass
 
     @property
-    def len_metres(self) -> int:
+    def amount_compounds(self) -> int:
         return sum(len(m) for m in self.__metres)
 
-    def make_mdc(self, cadence, time_lv=0) -> tuple:
-        try:
-            assert time_lv in (0, 1, 2, 3)
-        except AssertionError:
-            msg = "time_lv has to be 0 (element), 1 (unit),  2 (compound) or 3 (metre)."
-            raise ValueError(msg)
-
-        try:
-            real = sum(cadence.delay)
-            if time_lv == 0:
-                expected = self.size
-            elif time_lv == 1:
-                expected = self.amount_units
-            elif time_lv == 2:
-                expected = self.amount_compounds
-            elif time_lv == 3:
-                expected = self.amount_metres
-            assert real == expected
-        except AssertionError:
-            msg = "Cadence has to be as long as the TimeFLow - object."
-            msg += " Cadence duration: {0}. Expected duration {1}.".format(
-                real, expected
-            )
-            raise ValueError(msg)
+    @property
+    def amount_units(self) -> int:
+        return sum(m.amount_units for m in self.__metres)
 
 
 class Metre(object):
@@ -64,6 +43,10 @@ class Metre(object):
     @property
     def size(self) -> int:
         pass
+
+    @property
+    def amount_units(self) -> int:
+        return sum(len(c) for c in self.__compounds)
 
 
 class Compound(object):
