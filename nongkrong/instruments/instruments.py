@@ -8,7 +8,7 @@ class Instrument(object):
 
     One Instrument is connected to one person, who is supposed to play the respective
     instrument(s). The definition of instrument is therefore rather broad, meaning not
-    only one specific way to make a sound (hitting one drum) is meant, but rather a
+    only one specific way to make a sound is meant (hitting one drum), but rather a
     whole set of bodies, with which a player can produce music. For instance a drum
     set, with Snare drum, Bass drum and a cymbal would be considered as one instrument,
     since it can be played by one person.

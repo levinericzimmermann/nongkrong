@@ -142,7 +142,7 @@ def __init_functions():
             to_update.update(
                 {name.upper(): Function(name.upper(), identifier, True)}
             )
-        FUNCTIONS.update(to_update)
+        functions.update(to_update)
 
     return functions
 

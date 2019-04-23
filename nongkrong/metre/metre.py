@@ -1,70 +1,86 @@
-class TimeFlow(object):
-    def __init__(self, *metre):
-        self.__metres = tuple(metre)
-        pass
-
-    @property
-    def amount_compounds(self) -> int:
-        return sum(len(m) for m in self.__metres)
-
-    @property
-    def amount_units(self) -> int:
-        return sum(m.amount_units for m in self.__metres)
+import functools
+import operator
 
 
-class Metre(object):
-    def __init__(self, *compound):
-        self.__compounds = tuple(compound)
+def __make_timeline(name, nested_structure):
+    def make_property_function(name, depth, attribute_names):
+        if depth == 0:
 
-    def __repr__(self) -> str:
-        return str(self.__compounds)
+            def getter(self) -> tuple:
+                return self._TimeLine__iterable
 
-    def __getitem__(self, idx) -> "Compound":
-        return self.__compounds[idx].copy()
+        else:
 
-    def __setitem__(self, idx, compound) -> "Metre":
-        pass
+            def getter(self) -> tuple:
+                iterable = self._TimeLine__iterable
+                current_attribute = attribute_names[depth]
+                iterable = tuple(
+                   getattr(item, current_attribute) for item in iterable
+                )
+                iterable = functools.reduce(operator.add, iterable)
+                return tuple(iterable)
 
-    def flat(self) -> tuple:
-        pass
+        return getter
 
-    def copy(self) -> "Metre":
-        pass
+    def make_size_per_attribute_property(name):
+        def getter(self) -> tuple:
+            return tuple(item.size for item in getattr(self, name))
 
-    def reverse(self) -> "Metre":
-        pass
+        return getter
 
-    def append(self, compound) -> "Metre":
-        pass
+    def make_amount_per_attribute_property(name):
+        def getter(self) -> tuple:
+            return len(getattr(self, name))
 
-    def insert(self, idx, compound) -> "Metre":
-        pass
+        return getter
 
-    @property
-    def size(self) -> int:
-        pass
+    def make_size_property(highest_attribute):
+        def getter(self) -> int:
+            return sum(getattr(self, "{0}_size".format(highest_attribute)))
 
-    @property
-    def amount_units(self) -> int:
-        return sum(len(c) for c in self.__compounds)
+        return getter
 
+    class TimeLine(object):
+        def __init__(self, *item):
+            self.__iterable = tuple(item)
 
-class Compound(object):
-    def __init__(self, *unit):
-        self.__units = tuple(unit)
+        def __repr__(self) -> str:
+            return str(self.__iterable)
 
-    @property
-    def size(self) -> int:
-        pass
+        def reverse(self) -> "TimeLine":
+            return type(self)(*tuple(reversed(self.__iterable)))
 
-    def copy(self) -> "Compound":
-        pass
+        def add(self, item) -> "TimeLine":
+            return type(self)(self.__iterable + (item,))
+
+    attribute_names = tuple(c.__name__.lower() for c in nested_structure)
+    for depth, attribute in enumerate(attribute_names):
+        getter_method = make_property_function(attribute, depth, attribute_names)
+        size_method = make_size_per_attribute_property(attribute)
+        amount_method = make_amount_per_attribute_property(attribute)
+        setattr(TimeLine, attribute, property(getter_method))
+        setattr(TimeLine, "{0}_size".format(attribute), property(size_method))
+        setattr(TimeLine, "{0}_amount".format(attribute), property(amount_method))
+
+    TimeLine.__name__ = name
+    TimeLine.__hierarchy = attribute_names
+    TimeLine.nested_structure = property(lambda self: self.__hierarchy)
+    setattr(TimeLine, "size", property(make_size_property(attribute_names[0])))
+    return TimeLine
 
 
 class Unit(object):
-    def __init__(self, size: int):
+    def __init__(self, size: int) -> None:
         self.__size = size
+
+    def __repr__(self) -> str:
+        return "U{0}".format(self.size)
 
     @property
     def size(self) -> int:
         return self.__size
+
+
+Compound = __make_timeline("Compound", (Unit,))
+Metre = __make_timeline("Metre", (Compound, Unit))
+TimeFlow = __make_timeline("TimeFlow", (Metre, Compound, Unit))
