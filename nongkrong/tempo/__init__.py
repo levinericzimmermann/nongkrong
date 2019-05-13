@@ -1,0 +1,1 @@
+from nongkrong.tempo import tempo

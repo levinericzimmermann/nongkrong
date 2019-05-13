@@ -1,12 +1,14 @@
 import abc
+import functools
+import operator
 import itertools
 
 from mu.mel import mel
 from mu.mel import ji
 from mu.sco import old
 
-from nongkrong.attractors import attractors
 from nongkrong.metre import metre
+from nongkrong.tempo import tempo
 from nongkrong.render import notation
 from nongkrong.render import sound
 
@@ -41,18 +43,17 @@ class Score(object):
         pass
 
 
-class SectionMaker(abc.ABC):
+class Section(abc.ABC):
     def __init__(
         self,
         name: str,
-        cadences_per_player: dict,
+        mdc_per_player: dict,
+        player,
         timeflow: metre.TimeFlow,
-        tempo: attractors.TempoLine = None,
-        repetition: attractors.RepetitionLine = None,
-        delay: attractors.DelayLine = None,
+        tempo: tempo.TempoLine = None,
+        delay: tuple = None,
     ) -> None:
         self.__name = name
-        pass
 
     @abc.abstractproperty
     def players(self):
@@ -92,11 +93,12 @@ class MDC(object):
             The internal limit of how deep a beat can be divided is 4 divisions
             / 16 Elements per beat.
 
-    To initalise a new MDC, you need an mu.sco.old.Cadence objects, its respective
-    TimeFlow and the time_level, with which the Cadence shall be interpreted. The
-    class will automatically divide the Cadence and generate through the division
-    a new MDC object. The time level argument sets what a unit of 1 delay or 1
-    duration in Cadence.delay or Cadence.duration is supposed to mean.
+    To initalise a new MDC with the mk_mdc_by_cadence - method, you need an
+    mu.sco.old.Cadence objects, its respective TimeFlow and the time_level,
+    with which the Cadence shall be interpreted. The class will automatically
+    divide the Cadence and generate through the division a new MDC object.
+    The time level argument sets what a unit of 1 delay or 1 duration in
+    Cadence.delay or Cadence.duration is supposed to mean.
 
     For
         ...time_lv == 0 -> 1 in cadence.delay equals one element in metre.Unit
@@ -109,9 +111,10 @@ class MDC(object):
                         m * [1 / (2 ** x)].
     Therefore tuplets are not possible.
 
-    Finally there is one last additional argument when initalising a MDC named
-    is_pitch_sustained. It's of type bool (True or False) and changes the way
-    how the translation function from cadence to Metre-divided-cadence works.
+    Finally there is one last additional argument when initalising a MDC with
+    the mk_mdc_by_cadence - method named is_pitch_sustained.
+    It's of type bool (True or False) and changes the way how the translation
+    function from cadence to Metre-divided-cadence works.
     For Instruments with a continous sustain (Flute, Bowed String, ...), the
     expected input is 'True', while Instruments with a disappearing tone (Drums,
     Xylophones, Plucked Strings) are expected to get the input 'False'.
@@ -126,8 +129,13 @@ class MDC(object):
     two elements won't be played legato but with an interruption.
     """
 
-    def __init__(
-        self,
+    def __init__(self, structure: tuple, is_pitch_sustained: bool = False):
+        self.__is_pitch_sustained = is_pitch_sustained
+        self.__structure = structure
+
+    @classmethod
+    def mk_mdc_by_cadence(
+        cls,
         cadence: old.Cadence,
         time_flow: metre.TimeFlow,
         time_lv: int = 0,
@@ -139,8 +147,10 @@ class MDC(object):
         MDC.are_delay_values_of_cadence_valid(cadence, time_lv)
 
         # building inner structure
-        self.__is_pitch_sustained = is_pitch_sustained
-        self.__structure = self.convert_input2structure(cadence, time_flow, time_lv)
+        structure = cls.convert_input2structure(
+            cadence, time_flow, time_lv, is_pitch_sustained
+        )
+        return cls(structure, is_pitch_sustained)
 
     @staticmethod
     def is_valid_time_lv(time_lv: int) -> None:
@@ -199,7 +209,10 @@ class MDC(object):
                 if diff:
                     MDC.detect_division_depth_of_rhythmical_value(diff)
 
-    def divide_cadence_by_groups(self, cadence: old.Cadence, groups: tuple) -> tuple:
+    @staticmethod
+    def divide_cadence_by_groups(
+        cadence: old.Cadence, groups: tuple, is_pitch_sustained
+    ) -> tuple:
         def divide_recursively(
             remaining_cadence, remaining_groups, divided_cadences: list = []
         ) -> list:
@@ -224,7 +237,7 @@ class MDC(object):
                         item1 = item.copy()
                         item1.delay = diff
                         item1.duration = diff
-                        if self.is_pitch_sustained is False:
+                        if is_pitch_sustained is False:
                             item1.pitch = ji.JIHarmony([])
                         new_cadence.append(item0)
                         surplus_element = item1
@@ -241,7 +254,8 @@ class MDC(object):
 
         return tuple(divide_recursively(cadence, groups, []))
 
-    def divide_unit_by_elements(self, cadence) -> tuple:
+    @staticmethod
+    def divide_unit_by_elements(cadence, is_pitch_sustained) -> tuple:
         def divide_recursively(cadence, size=1):
             duration = float(cadence.duration)
             beats = duration / size
@@ -255,11 +269,11 @@ class MDC(object):
                 raise ValueError(msg)
             beats = int(beats)
             group = tuple(size for i in range(beats))
-            divided = self.divide_cadence_by_groups(cadence, group)
+            divided = MDC.divide_cadence_by_groups(cadence, group, is_pitch_sustained)
             result = []
             for div in divided:
                 if len(div) == 1:
-                    p = div[0].pitch
+                    p = ji.JIHarmony(div[0].pitch)
                     if len(p) == 0:
                         p = mel.TheEmptyPitch
                     result.append(p)
@@ -273,21 +287,27 @@ class MDC(object):
 
         return divide_recursively(cadence)
 
+    @staticmethod
     def convert_input2structure(
-        self, cadence: old.Cadence, time_flow: metre.TimeFlow, time_lv: int
+        cadence: old.Cadence,
+        time_flow: metre.TimeFlow,
+        time_lv: int,
+        is_pitch_sustained: bool,
     ) -> tuple:
         def recursive_divider(cadence, nested_structure, time_line) -> tuple:
             if nested_structure:
                 structure = nested_structure[0]
                 items = getattr(time_line, structure)
                 sizes = getattr(time_line, "{0}_size".format(structure))
-                divided_cadences = self.divide_cadence_by_groups(cadence, sizes)
+                divided_cadences = MDC.divide_cadence_by_groups(
+                    cadence, sizes, is_pitch_sustained
+                )
                 return tuple(
                     recursive_divider(cadence, nested_structure[1:], tl)
                     for cadence, tl in zip(divided_cadences, items)
                 )
             else:
-                return self.divide_unit_by_elements(cadence)
+                return MDC.divide_unit_by_elements(cadence, is_pitch_sustained)
 
         # in case time_lv != 0, convert the cadences time values
         # (delay / duration) to the basic elementar lv
@@ -310,7 +330,7 @@ class MDC(object):
 
         return recursive_divider(cadence, time_flow.nested_structure, time_flow)
 
-    def convert2cadence(self, dynamics, tempo, repetitions, delays) -> old.JICadence:
+    def convert2cadence(self, tempo: tempo.TempoLine, delay: tuple) -> old.JICadence:
         """
         """
         pass
@@ -325,16 +345,82 @@ class MDC(object):
     def __getitem__(self, idx) -> tuple:
         return tuple(self.__structure[idx])
 
-    def flat(self) -> tuple:
-        pass
+    def __iter__(self) -> iter:
+        return iter(self.__structure)
+
+    def divide_by_decomposition(self, decomposition: dict) -> tuple:
+        """Decomposition is a dict with Pitch - objects as keys and tuple as values.
+
+        Those tuple contain integers.
+        The specific Pitches will be divided to new MDC according to their
+        integer value. The integer values are expected to start with 0.
+        """
+
+        def distribute_harmony(harmony) -> tuple:
+            harmonies_per_mdc = [[]] * amount_mdc
+            for pitch in harmony:
+                for instridx in decomposition[pitch]:
+                    harmonies_per_mdc[instridx].append(pitch)
+            container = []
+            for idx, harmony in enumerate(harmonies_per_mdc):
+                if harmony:
+                    container.append(ji.JIHarmony(harmony))
+                else:
+                    container.append(mel.TheEmptyPitch)
+            return tuple(container)
+
+        def divide_unit(unit, lv=0) -> tuple:
+            container = [[]] * amount_mdc
+            for element in unit:
+                if element == mel.TheEmptyPitch:
+                    for idx in range(amount_mdc):
+                        container[idx].append(mel.TheEmptyPitch)
+                elif type(element) == ji.JIHarmony:
+                    for idx, el in enumerate(distribute_harmony(element)):
+                        container[idx].append(el)
+                else:
+                    for idx, el in enumerate(divide_unit(el, 1)):
+                        container[idx].append(el)
+            if lv > 0:
+                for idx, part in enumerate(container):
+                    if part[1] == mel.TheEmptyPitch:
+                        container[idx] = part[0]
+            return tuple(tuple(part) for part in container)
+
+        def divide_recursively(item, lv=0) -> tuple:
+            container = [[]] * amount_mdc
+            for subitem in item:
+                if lv == 2:  # already unit
+                    divided = divide_unit(subitem)
+                else:  # still higher level (metre or compound)
+                    divided = divide_recursively(subitem, lv + 1)
+                for idx, div in enumerate(divided):
+                    container[idx].append(div)
+            return tuple(tuple(part) for part in container)
+
+        amount_mdc = max(functools.reduce(operator.add, decomposition.values())) + 1
+        mdcs = divide_recursively(tuple(self.__structure))
+        return tuple(MDC(tuple(mdc), self.is_pitch_sustained) for mdc in mdcs)
 
     def divide_by_notation(self, instrument) -> tuple:
-        pass
+        ig0 = operator.itemgetter(0)
+        decomposition = {
+            key: tuple(ig0(i) for i in instrument.pitch2notation[key])
+            for key in instrument.pitch2notation
+        }
+        return self.divide_by_decomposition(decomposition)
 
     def divide_by_sound_engine(self, instrument) -> tuple:
-        pass
-
-
-class MDNC(object):
-    def __init__(self, mdc, pitch2notation):
-        pass
+        decomposition = {}
+        sound_engines = instrument.sound_engines
+        uniqfied_sound_engines = tuple(set(sound_engines))
+        for pitch in instrument.pitch2notation:
+            se_numbers = []
+            for instrument_data in instrument.pitch2notation[pitch]:
+                instrument_number = instrument_data[0]
+                se_number = uniqfied_sound_engines.index(
+                    sound_engines[instrument_number]
+                )
+                se_numbers.append(se_number)
+            decomposition.update({pitch: tuple(se_numbers)})
+        return (self.divide_by_decomposition(decomposition), uniqfied_sound_engines)

@@ -1,5 +1,8 @@
 from nongkrong.render import notation
 
+import functools
+import operator
+
 # from nongkrong.render.sound import synthesis
 
 
@@ -19,12 +22,14 @@ class Instrument(object):
     of the different sound sources will be notated.
 
     The pitches of the incoming cadence will be distributed with the help of
-    a pitch2notation dict that has to be passed down during initialisation.
+    a pitch2notation dict that has to be passed during initialisation.
     The keys of this dictionary contains Pitch - objects, while its corresponding
-    values are made from two-element tuples. The first element is an integer
+    values are tuples. Those tuples contain one element for one sound source. In this
+    way the same pitch can be distributed to different sound sources. One element is
+    made by two-element tuples. The first element is an integer
     that equals the index of the sound source that shall be played if this pitch
-    occurs. The second index is a string, that shall occur in the notation at
-    the respecitve position.
+    occurs. The second index is a notation.Sign - object, that shall occur in
+    the notation at the respective position.
 
     Last but not least every Instrument object also needs a specific
     VerticalLineStyle - object and a unique name. First one sets the style
@@ -36,13 +41,13 @@ class Instrument(object):
         self,
         name: str,
         pitch2notation: dict,
-        horizontal_lines: tuple,
-        vertical_line_style: notation.VerticalLineStyle,
+        horizontal_line_styles: tuple,
         sound_engines: tuple,
+        vertical_line_style: notation.VerticalLineStyle,
     ):
         self.__len_engines = len(sound_engines)
         try:
-            assert len(horizontal_lines) == self.__len_engines
+            assert len(horizontal_line_styles) == self.__len_engines
         except AssertionError:
             msg = "There has to be as many sound engines as there are notation lines."
             raise ValueError(msg)
@@ -50,7 +55,7 @@ class Instrument(object):
         self.__name = name
         self.__available_pitches = tuple(sorted(pitch2notation.keys()))
         self.__pitch2notation = pitch2notation
-        self.__horizontal_lines = horizontal_lines
+        self.__horizontal_line_styles = horizontal_line_styles
         self.__sound_engines = sound_engines
         self.__vertical_line_style = vertical_line_style
 
@@ -71,66 +76,28 @@ class Instrument(object):
         return self.__sound_engines
 
     @property
-    def horizontal_lines(self) -> tuple:
-        return self.__horizontal_lines
+    def horizontal_line_styles(self) -> tuple:
+        return self.__horizontal_line_styles
 
     @property
     def vertical_line_style(self) -> tuple:
         return self.__vertical_line_style
 
-    def convert_mdc2mdnc(self, mdc) -> tuple:
-        lines = [[]] * self.__len_engines
-        for metre in mdc:
-            metre_per_line = [[]] * self.__len_engines
-            for compound in metre:
-                compound_per_line = [[]] * self.__len_engines
-                for unit in compound:
-                    unit_per_line = [[]] * self.__len_engines
-                    for event in unit:
-                        pass
-                    for idx, upl in enumerate(unit_per_line):
-                        compound_per_line[idx].append(upl)
-                for idx, cpl in enumerate(compound_per_line):
-                    metre_per_line[idx].append(cpl)
-            for idx, mpl in enumerate(metre_per_line):
-                lines[idx].append(mpl)
-        return tuple(lines)
 
-    def render_sound(
-        self,
-        name: str,
-        mdc: tuple,
-        dynamic=None,
-        tempo=None,
-        delay=None,
-        repetition=None,
-    ) -> None:
-        mdc = repetition(delay(tempo(dynamic(mdc))))
-        self.sound_engines(mdc)
+def mk_p2n(pitches: tuple, instr_number: int) -> dict:
+    return {
+        pitch: ((instr_number, notation.SIGN_NUMBERS[idx]),)
+        for idx, pitch in enumerate(sorted(pitches))
+    }
 
-    def render_score(
-        self,
-        name: str,
-        mdc: tuple,
-        dynamic=None,
-        tempo=None,
-        delay=None,
-        repetition=None,
-    ) -> None:
-        mdnc = self.convert_mdc2mdnc(mdc)
-        ln = notation.Notation(
-            name, mdnc, dynamic, tempo, delay, repetition, self.notation_lines
-        )
-        ln.render()
 
-    def render(
-        self,
-        name: str,
-        mdc: tuple,
-        dynamic=None,
-        tempo=None,
-        delay=None,
-        repetition=None,
-    ) -> None:
-        self.render_sound(name, mdc, dynamic, tempo, delay, repetition)
-        self.render_score(name, mdc, dynamic, tempo, delay, repetition)
+def combine_p2n(*p2n):
+    def detect_value(p2n, key):
+        values = []
+        for p2 in p2n:
+            if key in p2.keys():
+                values.extend(p2[key])
+        return tuple(values)
+
+    keys = functools.reduce(operator.add, tuple(tuple(p2.keys()) for p2 in p2n))
+    return {key: detect_value(p2n, key) for key in keys}
