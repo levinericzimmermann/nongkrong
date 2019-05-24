@@ -46,3 +46,6 @@ class Delay(object):
         else:
             amount_lines = vertical_line.amount
         return notation.VerticalLine(thickness, color, amount_lines)
+
+
+DELAY_LIGHT = Delay(3, amount_lines=2, color="red")

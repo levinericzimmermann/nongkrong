@@ -1,0 +1,83 @@
+\documentclass{article}%
+\usepackage[T1]{fontenc}%
+\usepackage[utf8]{inputenc}%
+\usepackage{lmodern}%
+\usepackage{textcomp}%
+\usepackage{lastpage}%
+%
+\usepackage{array}%
+\usepackage{xcolor}%
+\usepackage{tabu}%
+\usepackage{tabularx}%
+\usepackage{tikz}%
+\usepackage{makecell}%
+\usepackage{fancyhdr}%
+\usepackage{arydshln}%
+\newcommand\distanceLarge{\rule[-4.1mm]{0cm}{11mm}}%
+\newcommand\distancelarge{\rule[-3.3mm]{0cm}{9.8mm}}%
+\newcommand\distancenormalsize{\rule[-2.3mm]{0cm}{8mm}}%
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{%
+\node[shape=circle,draw,inner sep=1.2pt] (char) {#1};}}%
+\newcommand*\circledcircled[1]{\tikz[baseline=(char.base)]{%
+\node[shape=circle,draw,inner sep=-1pt] (char) {#1};}}%
+\makeatletter%
+\newcommand*{\textoverline}[1]{$\overline{\hbox{#1}}\m@th$}%
+\makeatother%
+\makeatletter%
+\newcommand*{\mkinterval}[2]{$#1 \atop #2 \m@th$}%
+\makeatother%
+\newcolumntype{C}[1]{%
+>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}%
+\setlength\parindent{0pt}%
+\usepackage[a4paper,bindingoffset=0.2in,%%
+left=0.5cm,right=1cm,top=1.5cm,bottom=1cm,%%
+footskip=.25in]{geometry}%
+\fancyhf{} % clear all header and footers%
+\renewcommand{\headrulewidth}{0pt} % remove the header rule%
+\fancyhead[R]{\thepage}%
+\setlength{\headsep}{0.25cm}%
+\pagestyle{fancy}%
+%
+\begin{document}%
+\normalsize%
+\section{testSec}%
+\label{sec:testSec}%
+\begin{tabular*}{\textwidth} {l @{\extracolsep{\fill}} l l l l l l l l l l l l l l l l l l l l l}%
+\multicolumn{5}{l}{\distancenormalsize \normalsize \textit{Andante}} & \normalsize \textit{rit.} & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \normalsize + & \multicolumn{5}{l}{\normalsize \textit{Lento}} \\%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large } & \Large  & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\color{red} \vline width 0.5pt} !{\color{red} \vline width 0.5pt}l}{\Large \circled{$\circ$}} & \Large $\circ$ & \Large $\circ$ & \Large \textoverline{2 5} & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large $\circ$} \\%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large \circledcircled{\circled{$\circ$}}} & \Large $\circ$ & \Large $\circ$ & \Large $\circ$ & \Large 4 & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large $\circ$} & \Large 4 & \Large 5 & \Large 4 & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\color{red} \vline width 0.5pt} !{\color{red} \vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large } \\%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large } & \Large  & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large $\circ$} & \Large 2 & \Large $\circ$ & \Large 2 & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large $\circ$} & \Large 2 & \Large 5 & \Large 2 & \multicolumn{1}{!{\color{red} \vline width 0.5pt} !{\color{red} \vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large } \\%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large } & \Large  & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \multicolumn{1}{!{\color{red} \vline width 0.5pt} !{\color{red} \vline width 0.5pt}l}{\Large \circled{$\circ$}} & \Large 4 & \Large $\circ$ & \Large \textoverline{$\circ$ \textoverline{$\circ$ 5}} & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large 4} \\%
+\hline%
+\end{tabular*}%
+%
+\newline%
+%
+\vspace{8mm}%
+%
+\newline%
+%
+\begin{tabular*}{\textwidth} {l @{\extracolsep{\fill}} l l l l l l l l l l l l l l l}%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large } & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large \circled{$\circ$}} & \Large $\circ$ & \Large 3 & \Large $\circ$ & \Large 5 & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large 3} & \Large $\circ$ & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large } \\%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large } & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large } \\%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large } & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \Large  & \Large  & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large } \\%
+\hline%
+\multicolumn{1}{!{\vline width 0.5pt}l}{\distanceLarge \Large 5} & \Large 4 & \Large 3 & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large 5} & \Large 3 & \Large $\circ$ & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large \circled{$\circ$}} & \Large $\circ$ & \Large $\circ$ & \Large 5 & \Large $\circ$ & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large } & \Large  & \multicolumn{1}{!{\vline width 0.5pt}l}{\Large $\circ$} & \Large 2 & \multicolumn{1}{l!{\vline width 0.5pt}}{\Large 5} \\%
+\hline%
+\end{tabular*}%
+%
+\newline%
+%
+\vspace{8mm}%
+%
+\newline%
+
+%
+\end{document}

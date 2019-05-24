@@ -2,6 +2,35 @@ import functools
 import operator
 
 from mu.mel import ji
+from mu.mel import mel
+
+
+"""Module for JI-Pitch shortwriting
+
+Pitch notation: 7+   ->  7/4
+                3+7+ -> 21/16
+                5-   -> 8/5
+                3+5- -> 6/5
+
+Octave notation: 7+. -> 7/2
+                 .7+ -> 7/8
+
+Chord notation: (7+ 1+) -> (7/4, 1/1)
+
+Pause notation X -> mel.TheEmptyPitch
+         or    x -> mel.TheEmptyPitch
+
+Setting standard exponent:  !+ 3 -> 3/2
+                            !- 3 -> 4/3
+
+Writing comment: # This is a comment
+        (only for translate_from_file valid)
+
+Example:
+
+    # This is an example
+    !+ 3 1 5 3 (7 1.) 5+3- 3- (5 1) x (7- .7--) 1
+"""
 
 
 def translate2pitch(info: str, standard=1, idx=None) -> ji.JIPitch:
@@ -82,10 +111,9 @@ def translate2pitch(info: str, standard=1, idx=None) -> ji.JIPitch:
     return pitch.normalize(2) + octave
 
 
-def translate(information: str) -> tuple:
+def translate2line(information: str, standard=1) -> tuple:
     divided = tuple(info for info in information.split(" ") if info)
     pitches = []
-    standard = 1
     for idx, info in enumerate(divided):
         if info[0] == "!":
             if info[1] == "+":
@@ -97,12 +125,78 @@ def translate(information: str) -> tuple:
                     info[1], info, idx
                 )
                 raise ValueError(msg)
+        elif info[0].upper() == "X":
+            pitches.append(mel.TheEmptyPitch)
         else:
             pitches.append(translate2pitch(info, standard, idx))
-    return tuple(pitches)
+    return tuple(pitches), standard
+
+
+def translate(information: str, allow_chords=True) -> ji.JICadence:
+    if allow_chords:
+        not_closed_msg = "Paranthesis not closed for one chord in {0}".format(
+            information
+        )
+        not_opened_msg = "Paranthesis not opened for one chord in {0}".format(
+            information
+        )
+        id_line = "line"
+        id_chord = "chord"
+        lines_and_chords = []
+        is_chord = False
+        current_line = ""
+        for character in information:
+            if character == "(":
+                if is_chord:
+                    raise ValueError(not_closed_msg)
+                if current_line:
+                    lines_and_chords.append((id_line, str(current_line)))
+                    is_chord = True
+                    current_line = ""
+            elif character == ")":
+                if is_chord:
+                    lines_and_chords.append((id_chord, str(current_line)))
+                    is_chord = False
+                    current_line = ""
+                else:
+                    raise ValueError(not_opened_msg)
+            else:
+                current_line += character
+
+        if is_chord:
+            raise ValueError(not_closed_msg)
+        else:
+            if current_line:
+                lines_and_chords.append((id_line, str(current_line)))
+
+        cadence = []
+        standard = 1
+        for identity, line in lines_and_chords:
+            translation, standard = translate2line(line, standard)
+            if identity == id_line:
+                for pitch in translation:
+                    if pitch != mel.TheEmptyPitch:
+                        cadence.append(ji.JIHarmony([pitch]))
+                    else:
+                        cadence.append(ji.JIHarmony([]))
+            elif identity == id_chord:
+                cadence.append(
+                    ji.JIHarmony(
+                        tuple(p for p in translation if p != mel.TheEmptyPitch)
+                    )
+                )
+            else:
+                raise ValueError("UNKNOWN IDENTITY {0}".format(identity))
+
+        return ji.JICadence(cadence)
+    else:
+        return translate2line(information)[0]
 
 
 def translate_from_file(path: str) -> tuple:
     with open(path, "r") as content:
-        content = " ".join(content.read().splitlines())
+        lines = content.read().splitlines()
+        # deleting comments
+        lines = tuple(l for l in lines if l and l[0] != "#")
+        content = " ".join(lines)
         return translate(content)

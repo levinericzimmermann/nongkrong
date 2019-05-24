@@ -1,8 +1,8 @@
+import operator
 import itertools
 import pylatex
 
 
-from nongkrong.score import score
 from mu.mel import mel
 
 
@@ -11,15 +11,18 @@ class Sign(object):
         self.__cmd = cmd
         self.__is_mathematical_symbol = is_mathematical_symbol
 
+    def __repr__(self) -> str:
+        return "S:{0}".format(self.__cmd)
+
     @property
     def is_mathematical_symbol(self) -> bool:
         return self.__is_mathematical_symbol
 
     def __str__(self) -> str:
         if self.is_mathematical_symbol:
-            return r"${0}$".format(self.cmd)
+            return r"${0}$".format(self.__cmd)
         else:
-            return self.cmd
+            return self.__cmd
 
 
 SIGN_REST = Sign(r"\circ", True)
@@ -30,14 +33,16 @@ class SignAttractor(object):
     def __init__(self, cmd: str):
         self.__cmd = cmd
 
+    def __repr__(self) -> str:
+        return "ATT{0}".format(self.cmd)
+
     @property
     def cmd(self) -> str:
         return self.__cmd
 
     def wrap_signs(self, signs: tuple) -> str:
-        return r"{0}{{1}}".format(
-            self.cmd, " ".join(tuple(str(sign) for sign in signs))
-        )
+        wrapped = " ".join(tuple(str(sign) for sign in signs))
+        return self.cmd + "{" + wrapped + "}"
 
 
 SA_OVERLINE = SignAttractor(r"\textoverline")
@@ -63,6 +68,9 @@ class PitchNotationUnit(object):
         for wrap in self.wraps:
             content = (wrap.wrap_signs(content),)
         return content[0]
+
+    def __repr__(self) -> str:
+        return "PNU {0}".format(repr(tuple(repr(item) for item in self.content)))
 
 
 class HorizontalLineStyle(object):
@@ -168,7 +176,7 @@ class HorizontalLine(object):
 
     @property
     def has_label(self):
-        return self.has_label
+        return self.__has_label
 
     @property
     def vertical_lines(self):
@@ -190,14 +198,14 @@ class HorizontalLine(object):
 
         res = []
         size = r"\{0}".format(self.horizontal_line_style.size)
-        distance = r"\distance" + size
+        distance = r"\distance" + self.horizontal_line_style.size
         if self.has_label:
             res.append(r"{0} {1}".format(size, self.horizontal_line_style.label))
         for idx, unit in enumerate(self.content):
             if type(unit) == MultiColumn:
                 if self.horizontal_line_style.mark_metrical_division:
                     vl_before = self.vertical_lines[idx]
-                    if idx == len(self.content):
+                    if idx + 1 == len(self.content):
                         vl_after = self.vertical_lines[idx]
                     else:
                         vl_after = None
@@ -216,11 +224,11 @@ class HorizontalLine(object):
                 if self.horizontal_line_style.mark_metrical_division:
                     if self.horizontal_line_style.mark_metrical_division:
                         unit[0] = add_vl_before(unit[0], self.vertical_lines[idx])
-                    if idx == len(self.content):
+                    if idx + 1 == len(self.content):
                         if self.horizontal_line_style.mark_metrical_division:
                             unit[-1] = add_vl_after(unit[-1], self.vertical_lines[-1])
                 res.extend(unit)
-        return r" & ".join(res) + r"\\"
+        return r" & ".join(res) + r" \\"
 
 
 class VerticalLine(object):
@@ -237,12 +245,8 @@ class VerticalLine(object):
             basic += r"\color{" + self.color + r"} "
         res = basic + middle + str(self.thickness) + end
         if self.amount > 1:
-            for i in range(self.amount):
-                res += res
+            res = " ".join(tuple(res for i in range(self.amount)))
         return res
-
-
-# VERTICAL_LINE_FRAME = VerticalLine(1)
 
 
 class VerticalLineStyle(object):
@@ -253,22 +257,32 @@ class VerticalLineStyle(object):
 
 
 class Table(object):
-    def __init__(self, melodic_lines, tempo_line, amount_units):
+    def __init__(self, melodic_lines, tempo_line, amount_elements, has_label: bool):
         self.melodic_lines = melodic_lines
         self.tempo_line = tempo_line
-        self.amount_units = amount_units
+        self.amount_elements = amount_elements
+        self.has_label = has_label
 
     def add2document(self, document) -> None:
         def add_hline(document):
-            document.append(pylatex.Command("hline"))
+            if self.has_label:
+                cmd = r"\cline{" + "2-{0}".format(self.amount_elements + 1) + "}"
+                document.append(pylatex.NoEscape(cmd))
+            else:
+                document.append(pylatex.Command("hline"))
 
-        columns = r" ".join((r"l",) * (self.amount_units - 1))
+        amount_columns = int(self.amount_elements) - 1
+        if self.has_label:
+            amount_columns += 1
+
+        columns = r" ".join((r"l",) * amount_columns)
         table_start = r"\begin{tabular*}{\textwidth} {l @{\extracolsep{\fill}} "
         table_start += columns + r"}"
         document.append(pylatex.NoEscape(table_start))
 
-        add_hline(document)
-        document.append(pylatex.NoEscape(str(self.tempo_line)))
+        if self.tempo_line:
+            document.append(pylatex.NoEscape(str(self.tempo_line)))
+
         for melodic_line in self.melodic_lines:
             add_hline(document)
             document.append(pylatex.NoEscape(str(melodic_line)))
@@ -279,20 +293,21 @@ class Table(object):
 
 
 class Section(object):
-    MAX_SIGNS_PER_TABLE = 28
-    VERTICAL_SPACE_BETWEEN_TABLE = 7
+    MAX_SIGNS_PER_TABLE = 25
+    VERTICAL_SPACE_BETWEEN_TABLE = 8
 
     def __init__(
         self,
         name: str,
-        mdc: score.MDC,
+        mdc,
         instrument,
         tempo_per_unit: tuple,
         tempo_line_style: HorizontalLineStyle,
         delays: tuple,
-        mdc_gong: score.MDC,
-        mdc_tong: score.MDC,
+        mdc_gong,
+        mdc_tong,
     ):
+
         self.__name = name
         mdc_per_instrument = mdc.divide_by_notation(instrument)
 
@@ -387,16 +402,20 @@ class Section(object):
                     sign = SIGN_REST
                     amount_signs = 1
                 else:
+                    amount_signs = len(element)
                     signs = tuple(
-                        instrument.pitch2notation[pitch][0][1] for pitch in element
+                        str(instrument.pitch2notation[pitch][0][1]) for pitch in element
                     )
-                    amount_signs = len(signs)
-                    if amount_signs > 1:
-                        sign = r"({0})".format(r"/".join(signs))
-                    else:
+                    if amount_signs == 1:
                         sign = signs[0]
+                    elif amount_signs == 2:
+                        sign = r"\mkinterval{" + signs[1] + "}{" + signs[0] + "}"
+                    else:
+                        raise ValueError(
+                            "NO SOLUTION FOR MORE THAN TWO PITCHES FOUND YET"
+                        )
                 if is_gong:
-                    res = PitchNotationUnit((sign,), (SA_DOUBLE_CIRCLED, SA_CIRCLED))
+                    res = PitchNotationUnit((sign,), (SA_CIRCLED, SA_DOUBLE_CIRCLED))
                 elif is_tong:
                     res = PitchNotationUnit((sign,), (SA_CIRCLED,))
                 else:
@@ -460,7 +479,7 @@ class Section(object):
                 next_cut = min(next_cut_per_instr)
                 amount_units.append(next_cut)
                 amount_elements_per_unit_per_instrument = tuple(
-                    instr[:next_cut]
+                    instr[next_cut:]
                     for instr in amount_elements_per_unit_per_instrument
                 )
             return tuple(amount_units)
@@ -525,7 +544,7 @@ class Section(object):
             vl = vertical_lines[startidx : stopidx + 1]
 
             addable_or_not = tuple(
-                am_I_addable(data[2], style.add2table_if_empty)
+                any(am_I_addable(d[2], style.add2table_if_empty) for d in data)
                 for data, style in zip(
                     instrument_data, instrument.horizontal_line_styles
                 )
@@ -547,8 +566,9 @@ class Section(object):
             tempo_per_table,
             instrument_addable_per_table,
         ):
+            ig0 = operator.itemgetter(0)
             melodic_lines = tuple(
-                HorizontalLine(data[0], vl, style, has_label)
+                HorizontalLine(tuple(ig0(d) for d in data), vl, style, has_label)
                 for data, style, is_addable in zip(
                     instrument_data,
                     instrument.horizontal_line_styles,
@@ -565,27 +585,42 @@ class Section(object):
                     instrument,
                     has_label,
                 )
-            tempo_line = HorizontalLine(
-                tempo_per_unit[startidx:stopidx], vl, tempo_line_style, has_label
-            )
-            amount_units = stopidx - startidx
-            tables.append(Table(melodic_lines, tempo_line, amount_units))
+
+            if any(tuple(inf[2] for inf in tempo_data)):
+                tempo_line = HorizontalLine(
+                    tuple(ig0(inf) for inf in tempo_data),
+                    vl,
+                    tempo_line_style,
+                    has_label,
+                )
+            else:
+                tempo_line = None
+
+            amount_elements = sum(len(ig0(d)) for d in instrument_data[0])
+            tables.append(Table(melodic_lines, tempo_line, amount_elements, has_label))
         return tuple(tables)
 
     def add2document(self, doc) -> None:
         with doc.create(pylatex.Section(self.name)):
             for table in self.tables:
                 table.add2document(doc)
+                doc.append(pylatex.NoEscape(""))
+                doc.append(pylatex.Command("newline"))
+                doc.append(pylatex.NoEscape(""))
                 doc.append(
                     pylatex.Command(
                         "vspace",
                         arguments="{0}mm".format(self.VERTICAL_SPACE_BETWEEN_TABLE),
                     )
                 )
+                doc.append(pylatex.NoEscape(""))
+                doc.append(pylatex.Command("newline"))
+                doc.append(pylatex.NoEscape(""))
 
 
 class Document(object):
-    def __init__(self, *section):
+    def __init__(self, name: str, *section):
+        self.name = name
         self.__sections = section
 
     @property
@@ -595,17 +630,13 @@ class Document(object):
     @staticmethod
     def mk_basic_doc() -> pylatex.Document:
         doc = pylatex.Document()
-        doc.preamble.append(pylatex.NoEscape(r"\documentclass[a4paper]{article}"))
-        doc.preamble.append(
-            pylatex.Command(
-                "usepackage", options=pylatex.Options("T1"), arguments="fontenc"
-            )
-        )
-        doc.preamble.append(
-            pylatex.Command(
-                "usepackage", options=pylatex.Options("utf8"), arguments="inputenc"
-            )
-        )
+        # doc.preamble.append(pylatex.NoEscape(r"\documentclass[a4paper]{article}"))
+        # doc.preamble.append(
+        #     pylatex.Command("usepackage", options="T1", arguments="fontenc")
+        # )
+        # doc.preamble.append(
+        #     pylatex.Command("usepackage", options="utf8", arguments="inputenc")
+        # )
         doc.preamble.append(pylatex.Command("usepackage", arguments="array"))
         doc.preamble.append(pylatex.Command("usepackage", arguments="xcolor"))
         doc.preamble.append(pylatex.Command("usepackage", arguments="tabu"))
@@ -644,6 +675,11 @@ class Document(object):
             )
         )
         doc.preamble.append(pylatex.NoEscape(r"\makeatother"))
+        doc.preamble.append(pylatex.NoEscape(r"\makeatletter"))
+        doc.preamble.append(
+            pylatex.NoEscape(r"\newcommand*{\mkinterval}[2]{$#1 \atop #2 \m@th$}")
+        )
+        doc.preamble.append(pylatex.NoEscape(r"\makeatother"))
         doc.preamble.append(pylatex.NoEscape(r"\newcolumntype{C}[1]{"))
         doc.preamble.append(
             pylatex.NoEscape(
@@ -671,8 +707,8 @@ class Document(object):
         doc.preamble.append(pylatex.NoEscape(r"\pagestyle{fancy}"))
         return doc
 
-    def render(self, name: str) -> None:
+    def render(self, path: str) -> None:
         document = self.mk_basic_doc()
         for section in self.sections:
             section.add2document(document)
-        document.generate_pdf(name, clean_tex=False)
+        document.generate_pdf(path + self.name, clean_tex=False)

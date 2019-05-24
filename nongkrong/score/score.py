@@ -1,11 +1,14 @@
-import abc
 import functools
 import operator
+import os
 import itertools
+import sys
 
 from mu.mel import mel
 from mu.mel import ji
 from mu.sco import old
+
+import nongkrong.instruments as instr
 
 from nongkrong.metre import metre
 from nongkrong.tempo import tempo
@@ -33,43 +36,290 @@ while a Section contains one or several ((Instrument, MDC, ...), ...) objects.
 
 
 class Score(object):
-    def __init__(self, name, *section) -> None:
-        pass
+    INSTRUMENTS = (
+        instr.SITER_GONG,
+        (instr.SITER_BARUNG, instr.SITER_BARUNG_PLUS, instr.SITER_BARUNG_MINUS),
+        (instr.SITER_PANERUS, instr.SITER_PANERUS_PLUS, instr.SITER_PANERUS_MINUS),
+        (instr.KECAPI_PLUS_PLU, instr.KECAPI_PLUS_PLU, instr.KECAPI_PLUS_MIN),
+        (instr.KECAPI_MINUS_PLU, instr.KECAPI_MINUS_PLU, instr.KECAPI_MINUS_MIN),
+        instr.KENDANG,
+        instr.TAK,
+    )
 
-    def render_score(self) -> None:
-        pass
+    SIMPLIFIED_INSTRUMENTS = (
+        instr.SITER_GONG,
+        instr.SITER_BARUNG,
+        instr.SITER_PANERUS,
+        instr.KECAPI_PLUS_PLU,
+        instr.KECAPI_MINUS_PLU,
+        instr.KENDANG,
+        instr.TAK,
+    )
 
-    def render_sound(self) -> None:
-        pass
+    TIME_LV_PER_INSTRUMENT = (2, 1, 0, 0, 0, 0, 0)
+    TEMPO_LINE_STYLE = notation.HorizontalLineStyle("normalsize", "", False, False)
 
-
-class Section(abc.ABC):
-    def __init__(
-        self,
-        name: str,
-        mdc_per_player: dict,
-        player,
-        timeflow: metre.TimeFlow,
-        tempo: tempo.TempoLine = None,
-        delay: tuple = None,
-    ) -> None:
+    def __init__(self, name: str, path: str, *section_path: str) -> None:
+        sys.path.insert(0, path)
         self.__name = name
+        section_data = tuple(Score.get_data_of_section(path) for path in section_path)
+        info = Score.convert2valid_sections(section_data)
+        self.__sections, self.__mdc_gong, self.__mdc_tong = info
+        self.__document_per_instrument = self.mk_document_for_each_instrument(
+            self.__sections
+        )
+        self.__ssd_per_instr = self.mk_soundsynthdata_for_each_instrument(
+            self.__sections
+        )
 
-    @abc.abstractproperty
-    def players(self):
-        raise NotImplementedError
+    @staticmethod
+    def get_data_of_section(section_path) -> tuple:
+        return (section_path,) + __import__(section_path).main()
+
+    @staticmethod
+    def convert2valid_sections(data_per_section) -> tuple:
+        def detect_if_full_or_not(cadences_per_section: tuple) -> tuple:
+            return tuple(tuple(bool(c) for c in sec) for sec in cadences_per_section)
+
+        def return_cadence_and_instrument_for_complex(
+            idx, tf, time_lv, is_sutained, cadences, instruments, is_full_or_not_per_sec
+        ):
+            def detect_correct_instrument_for_empty_section(
+                idx, is_full_or_not_per_sec
+            ):
+                for is_full_or_not in is_full_or_not_per_sec[idx + 1 :]:
+                    if is_full_or_not[0]:
+                        return instruments[1]
+                    elif is_full_or_not[1]:
+                        return instruments[2]
+                for is_full_or_not in reversed(is_full_or_not_per_sec[:idx]):
+                    if is_full_or_not[0]:
+                        return instruments[1]
+                    elif is_full_or_not[1]:
+                        return instruments[2]
+                return instruments[0]
+
+            if all(is_full_or_not_per_sec[idx]):
+                return cadences[0], instruments[0]
+            elif all(tuple(not b for b in is_full_or_not_per_sec[idx])):
+                i = detect_correct_instrument_for_empty_section(
+                    idx, is_full_or_not_per_sec
+                )
+                return old.JICadence([old.Rest(tf.size)]), i
+            else:
+                if cadences[0]:
+                    return cadences[0], instruments[1]
+                else:
+                    return cadences[1], instruments[2]
+
+        def mk_mdc_gong_and_tong(cadence, timeflow) -> tuple:
+            cadence_gong, cadence_tong = [], []
+            for chord in cadence:
+                hg, ht = [], []
+                for p in chord.pitch:
+                    if p < ji.r(1, 2):
+                        hg.append(p)
+                    else:
+                        ht.append(p)
+                cadence_gong.append(old.Chord(ji.JIHarmony(hg), chord.delay))
+                cadence_tong.append(old.Chord(ji.JIHarmony(ht), chord.delay))
+            cadences = tuple(
+                old.JICadence(c).discard_rests() for c in (cadence_gong, cadence_tong)
+            )
+            return tuple(
+                MDC.mk_mdc_by_cadence(
+                    c, timeflow, Score.TIME_LV_PER_INSTRUMENT[0], False
+                )
+                for c in cadences
+            )
+
+        ig1 = operator.itemgetter(1)
+        ig2 = operator.itemgetter(2)
+        ig3 = operator.itemgetter(3)
+        ig4 = operator.itemgetter(3)
+        sb_full_or_not = detect_if_full_or_not(
+            tuple(ig1(ig2(data)) for data in data_per_section)
+        )
+        sp_full_or_not = detect_if_full_or_not(
+            tuple(ig2(ig2(data)) for data in data_per_section)
+        )
+        kec_p_full_or_not = detect_if_full_or_not(
+            tuple(ig3(ig2(data)) for data in data_per_section)
+        )
+        kec_m_full_or_not = detect_if_full_or_not(
+            tuple(ig4(ig2(data)) for data in data_per_section)
+        )
+
+        mdc_gong_ps, mdc_tong_ps = [], []
+        valid_sec_data = []
+        for sec_idx, data in enumerate(data_per_section):
+            tf = data[1]
+            tempo = data[3]
+            tempo = (tempo.convert2latex_per_unit(tf), tempo.convert2tempo_per_unit(tf))
+            cadences = list(data[2])
+            instruments = list(Score.INSTRUMENTS)
+            cad_sb, ins_sb = return_cadence_and_instrument_for_complex(
+                sec_idx,
+                tf,
+                Score.TIME_LV_PER_INSTRUMENT[1],
+                False,
+                cadences[1],
+                instruments[1],
+                sb_full_or_not,
+            )
+            cad_sp, ins_sp = return_cadence_and_instrument_for_complex(
+                sec_idx,
+                tf,
+                Score.TIME_LV_PER_INSTRUMENT[2],
+                False,
+                cadences[2],
+                instruments[2],
+                sp_full_or_not,
+            )
+            cad_kec_p, ins_kec_p = return_cadence_and_instrument_for_complex(
+                sec_idx,
+                tf,
+                Score.TIME_LV_PER_INSTRUMENT[3],
+                False,
+                cadences[3],
+                instruments[3],
+                kec_p_full_or_not,
+            )
+            cad_kec_m, ins_kec_m = return_cadence_and_instrument_for_complex(
+                sec_idx,
+                tf,
+                Score.TIME_LV_PER_INSTRUMENT[4],
+                False,
+                cadences[4],
+                instruments[4],
+                kec_m_full_or_not,
+            )
+            cadences[1], cadences[2] = cad_sb, cad_sp
+            cadences[3], cadences[4] = cad_kec_p, cad_kec_m
+            instruments[1], instruments[2] = ins_sb, ins_sp
+            instruments[3], instruments[4] = ins_kec_p, ins_kec_m
+            mdcs = tuple(
+                MDC.mk_mdc_by_cadence(cad, tf, tl, False)
+                for cad, tl in zip(cadences, Score.TIME_LV_PER_INSTRUMENT)
+            )
+            valid_sec_data.append((data[0], mdcs, tempo, data[4], tuple(instruments)))
+
+            mdc_gong, mdc_tong = mk_mdc_gong_and_tong(cadences[0], tf)
+            mdc_gong_ps.append(mdc_gong)
+            mdc_tong_ps.append(mdc_tong)
+
+        return tuple(tuple(it) for it in (valid_sec_data, mdc_gong_ps, mdc_tong_ps))
 
     @property
     def name(self) -> str:
-        return str(self.__name)
+        return self.__name
 
-    def render_score(self) -> None:
-        notation.render()
-        pass
+    def __repr__(self) -> str:
+        return "Score: {0}".format(self.name)
+
+    @property
+    def mdc_gong_per_sec(self) -> tuple:
+        return self.__mdc_gong
+
+    @property
+    def mdc_tong_per_sec(self) -> tuple:
+        return self.__mdc_tong
+
+    def mk_document_for_each_instrument(self, sections) -> tuple:
+        sec_per_instrument = [[] for i in Score.INSTRUMENTS]
+        for idx_sec, section in enumerate(sections):
+            name = section[0]
+            tempo_per_unit = section[2][0]  # second element is for sound synthesis
+            delay_per_unit = section[3]
+            for ins_idx, ins_mdc, ins in zip(
+                range(len(Score.INSTRUMENTS)), section[1], section[4]
+            ):
+                not_sec = notation.Section(
+                    name,
+                    ins_mdc,
+                    ins,
+                    tempo_per_unit,
+                    self.TEMPO_LINE_STYLE,
+                    delay_per_unit,
+                    self.mdc_gong_per_sec[idx_sec],
+                    self.mdc_tong_per_sec[idx_sec],
+                )
+                sec_per_instrument[ins_idx].append(not_sec)
+        return tuple(
+            notation.Document("{0}_{1}".format(self.name, ins.name), *se)
+            for se, ins in zip(sec_per_instrument, Score.SIMPLIFIED_INSTRUMENTS)
+        )
+
+    def mk_soundsynthdata_for_each_instrument(self, data_per_section) -> tuple:
+        sec_per_instrument = [[] for i in Score.INSTRUMENTS]
+        for idx_sec, section in enumerate(data_per_section):
+            tempo_per_unit = section[2][1]  # first element is for notation
+            delay_per_unit = section[3]
+            for ins_idx, ins_mdc, ins in zip(
+                range(len(Score.INSTRUMENTS)), section[1], section[4]
+            ):
+                divided_mdcs, sound_engines = ins_mdc.divide_by_sound_engine(ins)
+                cadences = tuple(
+                    dimdc.convert2cadence(tempo_per_unit, delay_per_unit)
+                    for dimdc in divided_mdcs
+                )
+                sec_per_instrument[ins_idx].append((cadences, sound_engines, ins.name))
+        cadences_and_soundengines_pairs_per_instrument = []
+        ig0 = operator.itemgetter(0)
+        for inst in sec_per_instrument:
+            div_cadences = tuple(ig0(i) for i in inst)
+            sound_engines = inst[0][1]
+            ins_name = inst[0][2]
+            zipped = zip(*div_cadences)
+            cadences = tuple(functools.reduce(operator.add, c) for c in zipped)
+            assert len(cadences) == len(sound_engines)
+            cadence_sound_engine_pair = tuple(zip(cadences, sound_engines))
+            cadences_and_soundengines_pairs_per_instrument.append(
+                (ins_name, cadence_sound_engine_pair)
+            )
+        return tuple(cadences_and_soundengines_pairs_per_instrument)
+
+    def render_notation(self) -> None:
+        directory = "output/notation/"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        for doc in self.__document_per_instrument:
+            doc.render(directory)
+
+    @property
+    def mix_data(self) -> tuple:
+        return (
+            (1, 0.5),
+            (0.6, 0.2),
+            (0.5, 0.75),
+            (0.5, 0),
+            (0.5, 0.95),
+            (0.5, 0.6),
+            (0.94, 0.4),
+        )
 
     def render_sound(self) -> None:
-        sound.render()
-        pass
+        directory = "output/sound/"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        files = []
+        for ssd in self.__ssd_per_instr:
+            instr_files = []
+            name = ssd[0]
+            directory_local = "{0}{1}/".format(directory, name)
+            if not os.path.exists(directory_local):
+                os.makedirs(directory_local)
+            for idx, pair in enumerate(ssd[1]):
+                file_name = "{0}{1}".format(directory_local, idx)
+                cadence, se = pair
+                se(file_name, cadence)
+                instr_files.append(file_name)
+            final_file = "{0}{1}".format(directory_local, name)
+            sound.mix_mono(final_file, *tuple("{0}".format(ifn) for ifn in instr_files))
+            files.append(final_file)
+        res = "{0}{1}".format(directory, self.name)
+        input_data = tuple((n,) + mixinfo for n, mixinfo in zip(files, self.mix_data))
+        sound.mix_complex(res, *input_data)
 
 
 class MDC(object):
@@ -141,6 +391,7 @@ class MDC(object):
         time_lv: int = 0,
         is_pitch_sustained: bool = False,
     ):
+        cadence = cadence.copy()
         # testing if input is valid
         MDC.is_valid_time_lv(time_lv)
         MDC.is_cadence_as_long_as_timeflow(cadence, time_flow, time_lv)
@@ -330,10 +581,64 @@ class MDC(object):
 
         return recursive_divider(cadence, time_flow.nested_structure, time_flow)
 
-    def convert2cadence(self, tempo: tempo.TempoLine, delay: tuple) -> old.JICadence:
+    def convert2cadence(
+        self, tempo_factors_per_unit: tuple, delays: tuple
+    ) -> old.JICadence:
         """
         """
-        pass
+
+        def return_item_and_sizes(element, lv=0) -> tuple:
+            if type(element) == ji.JIHarmony or element == mel.TheEmptyPitch:
+                return ((element, lv),)
+            else:
+                ret = tuple([])
+                for tup in (return_item_and_sizes(it, lv + 1) for it in element):
+                    ret += tup
+                return ret
+
+        divisions_per_elements = int(tempo.TempoLine.divisions_per_element)
+        cadence = []
+        unit_count = 0
+        for meter in self.__structure:
+            for compound in meter:
+                for unit in compound:
+
+                    delay = delays[unit_count]
+                    if delay:
+                        if cadence:
+                            cadence[-1].delay += delay.duration
+                            cadence[-1].duration += delay.duration
+                        else:
+                            cadence.append(old.Rest(delay.duration))
+
+                    factors = tempo_factors_per_unit[unit_count]
+
+                    abstract_delays = []
+                    harmonies = []
+
+                    for element in unit:
+                        item_and_size_pairs = return_item_and_sizes(element)
+                        for pair in item_and_size_pairs:
+                            harmonies.append(pair[0])
+                            de = int(divisions_per_elements * (1 / (2 ** pair[1])))
+                            abstract_delays.append(de)
+
+                    real_delays = tuple(itertools.accumulate([0] + abstract_delays))
+                    real_delays = tuple(
+                        sum(factors[idx0:idx1])
+                        for idx0, idx1 in zip(real_delays, real_delays[1:])
+                    )
+
+                    for h, de in zip(harmonies, real_delays):
+                        if h:
+                            cadence.append(old.Chord(h, de))
+                        else:
+                            cadence.append(old.Rest(de))
+
+                    unit_count += 1
+
+        cadence = old.JICadence(cadence).discard_rests()
+        return cadence
 
     @property
     def is_pitch_sustained(self) -> bool:
@@ -357,7 +662,7 @@ class MDC(object):
         """
 
         def distribute_harmony(harmony) -> tuple:
-            harmonies_per_mdc = [[]] * amount_mdc
+            harmonies_per_mdc = [[] for i in range(amount_mdc)]
             for pitch in harmony:
                 for instridx in decomposition[pitch]:
                     harmonies_per_mdc[instridx].append(pitch)
@@ -370,7 +675,7 @@ class MDC(object):
             return tuple(container)
 
         def divide_unit(unit, lv=0) -> tuple:
-            container = [[]] * amount_mdc
+            container = [[] for i in range(amount_mdc)]
             for element in unit:
                 if element == mel.TheEmptyPitch:
                     for idx in range(amount_mdc):
@@ -379,16 +684,16 @@ class MDC(object):
                     for idx, el in enumerate(distribute_harmony(element)):
                         container[idx].append(el)
                 else:
-                    for idx, el in enumerate(divide_unit(el, 1)):
-                        container[idx].append(el)
-            if lv > 0:
-                for idx, part in enumerate(container):
-                    if part[1] == mel.TheEmptyPitch:
-                        container[idx] = part[0]
+                    for idx, el in enumerate(divide_unit(element, 1)):
+                        if el[1] == mel.TheEmptyPitch:
+                            el2add = el[0]
+                        else:
+                            el2add = el
+                        container[idx].append(el2add)
             return tuple(tuple(part) for part in container)
 
         def divide_recursively(item, lv=0) -> tuple:
-            container = [[]] * amount_mdc
+            container = [[] for i in range(amount_mdc)]
             for subitem in item:
                 if lv == 2:  # already unit
                     divided = divide_unit(subitem)

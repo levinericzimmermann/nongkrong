@@ -5,3 +5,4 @@ from nongkrong import instruments
 from nongkrong import tempo
 from nongkrong import delays
 from nongkrong import score
+from nongkrong import tools

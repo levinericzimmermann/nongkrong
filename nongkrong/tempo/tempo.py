@@ -4,6 +4,10 @@ import numpy as np
 from nongkrong.render import notation
 
 
+def bpm2factor(bpm) -> float:
+    return 60 / bpm
+
+
 class TempoLine(object):
     divisions_per_element = 64
 
@@ -19,19 +23,27 @@ class TempoLine(object):
     def convert2tempo_per_unit(self, time_flow) -> tuple:
         data = []
         current_tempo = 1
+        last_stable_tempo = 1
         for usize, item in zip(time_flow.unit_size, self.__content):
             if item:
-                local_tempo = item.calculate_tempo(current_tempo)
+                local_tempo = item.calculate_tempo(current_tempo, last_stable_tempo)
                 current_tempo = local_tempo[1]
+                if type(item) != ChangeTempo:
+                    last_stable_tempo = current_tempo
             else:
-                local_tempo = (current_tempo,) * 2
+                local_tempo = tuple(float(current_tempo) for i in range(2))
+
             interpolation = np.linspace(
                 local_tempo[0],
                 local_tempo[1],
                 usize * self.divisions_per_element,
                 dtype=float,
             )
-            data.append(tuple(interpolation))
+            interpolation = tuple(
+                item / self.divisions_per_element for item in interpolation
+            )
+
+            data.append(interpolation)
         return tuple(data)
 
     def convert2latex_per_unit(self, time_flow) -> tuple:
@@ -39,7 +51,7 @@ class TempoLine(object):
         for counter, usize, item in zip(
             range(len(self.__content)), time_flow.unit_size, self.__content
         ):
-            if item:
+            if item is not None:
                 msg_before = None
                 if counter > 0:
                     prior = self.__content[counter - 1]
@@ -78,12 +90,23 @@ class SetTempo(AbstractTempo):
     def name(self) -> str:
         return self.__name
 
-    def calculate_tempo(self, prior_tempo=1) -> tuple:
+    def calculate_tempo(self, prior_tempo=1, last_stable_tempo=1) -> tuple:
         return self.factor, self.factor
 
     def mk_latex_content(self, unitsize: int, msg_before=None) -> tuple:
-        name = r"\textit{" + self.name + r"}}"
+        name = r"\textit{" + self.name + r"}"
         return notation.MultiColumn(name, unitsize), len(self.name)
+
+
+LARGHISSIMO = SetTempo("Larghissimo", bpm2factor(24))
+LARGO = SetTempo("Largo", bpm2factor(45))
+LENTO = SetTempo("Lento", bpm2factor(58))
+ADAGIO = SetTempo("Adagio", bpm2factor(70))
+ANDANTE = SetTempo("Andante", bpm2factor(90))
+MODERATO = SetTempo("Moderato", bpm2factor(110))
+ALLEGRO = SetTempo("Allegro", bpm2factor(133))
+VIVACE = SetTempo("Vivace", bpm2factor(165))
+PRESTO = SetTempo("Presto", bpm2factor(190))
 
 
 class ChangeTempo(AbstractTempo):
@@ -105,7 +128,7 @@ class ChangeTempo(AbstractTempo):
     def factor(self) -> float:
         return self.__factor
 
-    def calculate_tempo(self, prior_tempo=1) -> tuple:
+    def calculate_tempo(self, prior_tempo=1, last_stable_tempo=1) -> tuple:
         return prior_tempo, self.factor * prior_tempo
 
     def mk_latex_content(self, unitsize: int, msg_before=None) -> tuple:
@@ -114,3 +137,17 @@ class ChangeTempo(AbstractTempo):
         else:
             msg = self.msg
         return (msg,) + ((r"+",) * (unitsize - 1)), unitsize
+
+
+class __ATempo(AbstractTempo):
+    def __init__(self):
+        self.__name = r"\textit{A tempo}"
+
+    def calculate_tempo(self, prior_tempo=1, last_stable_tempo=1) -> tuple:
+        return last_stable_tempo, last_stable_tempo
+
+    def mk_latex_content(self, unitsize: int, msg_before=None) -> tuple:
+        return notation.MultiColumn(self.__name, unitsize), len("A tempo")
+
+
+ATEMPO = __ATempo()

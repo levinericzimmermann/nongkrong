@@ -14,9 +14,7 @@ def __make_timeline(name, nested_structure):
             def getter(self) -> tuple:
                 iterable = self._TimeLine__iterable
                 current_attribute = attribute_names[depth]
-                iterable = tuple(
-                   getattr(item, current_attribute) for item in iterable
-                )
+                iterable = tuple(getattr(item, current_attribute) for item in iterable)
                 iterable = functools.reduce(operator.add, iterable)
                 return tuple(iterable)
 
@@ -84,3 +82,13 @@ class Unit(object):
 Compound = __make_timeline("Compound", (Unit,))
 Metre = __make_timeline("Metre", (Compound, Unit))
 TimeFlow = __make_timeline("TimeFlow", (Metre, Compound, Unit))
+
+
+def define_metre_by_structure(structure):
+    m = []
+    for com in structure:
+        c = []
+        for size in com:
+            c.append(Unit(size))
+        m.append(Compound(*c))
+    return Metre(*m)

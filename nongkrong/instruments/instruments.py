@@ -84,10 +84,12 @@ class Instrument(object):
         return self.__vertical_line_style
 
 
-def mk_p2n(pitches: tuple, instr_number: int) -> dict:
+def mk_p2n(pitches: tuple, instr_number: int, autosort=True) -> dict:
+    if autosort:
+        pitches = tuple(sorted(pitches))
     return {
         pitch: ((instr_number, notation.SIGN_NUMBERS[idx]),)
-        for idx, pitch in enumerate(sorted(pitches))
+        for idx, pitch in enumerate(pitches)
     }
 
 
