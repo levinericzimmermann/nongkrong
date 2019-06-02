@@ -84,7 +84,7 @@ Metre = __make_timeline("Metre", (Compound, Unit))
 TimeFlow = __make_timeline("TimeFlow", (Metre, Compound, Unit))
 
 
-def define_metre_by_structure(structure):
+def define_metre_by_structure(structure: tuple) -> Metre:
     m = []
     for com in structure:
         c = []

@@ -35,7 +35,7 @@ Different plans and sketches as well as expected tunings for the individual inst
 	* Hj. Mulyaningsih. TOKO POLOWIJAN. (Yogyakarta)
 	* Bondho Gongso. TRI SUKO ASMORO HADI. (Yogyakarta)
 	* Mas PM (Surakarta)
-	* Sabilulungan (Bandung)
+	* Pak Atep (Bandung)
 
 
 The ensemble is supposed to be played by 9 persons.
@@ -52,10 +52,10 @@ Instead of Western staff notation, the project uses an extended version of the J
 
 While Western notation is more precise in rhythm, it is also more difficult to learn for a new instrument than the simple-to-read number notation. And since most of instruments only contain small ambitus, numbers are absolutely sufficient.
 
-To avoid the complicated problem of microtonal notation, this project will just stick on tablatures. Therefore it's important to keep in mind that the individual numbers in this notation don't represent specific pitches like in its Javanese complement, but are rather indicating which string or drum the player has to hit at a specific time.
+To avoid the complicated problem of microtonal notation, this project will just stick on tablatures. Therefore it's important to keep in mind that the individual numbers in this notation don't represent specific pitches like in its Javanese counterpart, but are rather indicating which string or drum the player has to hit at a specific time.
 
 The biggest difference between the traditional *kepatihan* notation and its adaption in this project could be found in the fact that the Javanese original is firstly intented to be a memory aid, while this adaption is supposed to be read during playing.
 
 ## About the project name
 
-The Indonesian word *nongkrong* literally means 'to squat'. In its more daily context it refers to "hangout" or "to do nothing in particular", "to spend time together doing nothing". When walking through a central Javanese city at night time, plenty of people can be seen, sitting along the streets, drinking tea and doing nothing specific for hours. In this way *nongkrong* becomes a symbol for the Javanese time perception whose uniquity and difference to its Western counterpart is remarkable. This time perception is of course also recognizable in Javanese music. The most picturesque example may be found in the famous *Wayang Kulit* (shadow puppetry). Those shows can last 6-7 hours from the evening until the morning with the musicans eating, talking and finally falling asleep in between. In this way *nongkrong* indicates a specific musical concept of time, where time itself becomes absent. The music resulting from this project aims to follow this notion of disappeared time.
+The Indonesian word *nongkrong* literally means 'to squat'. In its more daily context it refers to "hangout" or "to do nothing in particular", "to spend time together doing nothing". When walking through a central Javanese city at night time, plenty of people can be seen, sitting along the streets, drinking tea and doing nothing particular for hours. In this way *nongkrong* becomes a symbol for the Javanese time perception whose uniquity and difference to its Western counterpart is remarkable. This time perception is of course also recognizable in Javanese music. The most picturesque example may be found in the famous *Wayang Kulit* (shadow puppetry). Those shows can last 6-7 hours from the evening until the morning with the musicans eating, talking and finally falling asleep in between. In this way *nongkrong* indicates a specific musical concept of time, where time itself becomes absent. The music resulting from this project aims to follow this notion of disappeared time.

@@ -10,7 +10,8 @@ from nongkrong.render.sound.synthesis import pyteq
 
 
 class SoundEngine(abc.ABC):
-    CONCERT_PITCH = 278
+    # CONCERT_PITCH = 278
+    CONCERT_PITCH = 238
 
     @abc.abstractmethod
     def __call__(self, name: str, cadence: old.JICadence) -> None:

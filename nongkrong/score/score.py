@@ -234,6 +234,10 @@ class Score(object):
             for ins_idx, ins_mdc, ins in zip(
                 range(len(Score.INSTRUMENTS)), section[1], section[4]
             ):
+                print("NEW ISNTR")
+                print(ins.name)
+                print(ins_mdc)
+                print("")
                 not_sec = notation.Section(
                     name,
                     ins_mdc,
@@ -289,13 +293,13 @@ class Score(object):
     @property
     def mix_data(self) -> tuple:
         return (
-            (1, 0.5),
-            (0.6, 0.2),
-            (0.5, 0.75),
-            (0.5, 0),
-            (0.5, 0.95),
-            (0.5, 0.6),
-            (0.94, 0.4),
+            (1, 0.5, 0),
+            (0.7, 0.3, 0.019),
+            (0.6, 0.65, 0.003),
+            (0.6, 0, 0.006),
+            (0.6, 0.95, 0),
+            (0.65, 0.6, 0),
+            (0.98, 0.4, 0),
         )
 
     def render_sound(self) -> None:
@@ -664,8 +668,9 @@ class MDC(object):
         def distribute_harmony(harmony) -> tuple:
             harmonies_per_mdc = [[] for i in range(amount_mdc)]
             for pitch in harmony:
-                for instridx in decomposition[pitch]:
-                    harmonies_per_mdc[instridx].append(pitch)
+                if pitch != mel.TheEmptyPitch:
+                    for instridx in decomposition[pitch]:
+                        harmonies_per_mdc[instridx].append(pitch)
             container = []
             for idx, harmony in enumerate(harmonies_per_mdc):
                 if harmony:

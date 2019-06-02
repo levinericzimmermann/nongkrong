@@ -17,6 +17,14 @@ class Cadence(object):
             time = tuple(None for func in functions)
         self.__time = time
 
+    @property
+    def functions(self):
+        return self.__functions
+
+    @property
+    def time(self):
+        return self.__time
+
     def __repr__(self) -> str:
         mod = self.__modulations[0]
         representation = "["
@@ -49,7 +57,7 @@ class Cadence(object):
         except AttributeError:
             return False
 
-    def __getitem__(self, idx) -> functions.Function:
+    def __getitem__(self, idx):
         return self.__functions[idx]
 
     @staticmethod

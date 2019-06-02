@@ -48,7 +48,7 @@ class CompoundModulation(AbstractModulation):
 
     def __eq__(self, other):
         try:
-            if len(self.__steps) == 1 and type(other) == ElementarModulation:
+            if len(self.__steps) == 1 and type(other) == __ElementarModulation:
                 return self.__steps[0] == other
             else:
                 return self.__steps == other.__steps

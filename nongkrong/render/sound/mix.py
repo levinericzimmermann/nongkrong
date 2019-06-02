@@ -44,12 +44,12 @@ def mix_complex(outputname, *inputdata):
 
         lines = []
         for f in inputdata:
-            name, volume, pan = f
+            name, volume, pan, start = f
             name = "{0}.wav".format(name)
             pan0, pan1 = get_panning_arguments(pan)
             duration = sox.file_info.duration(name)
-            line = 'i1 0 {0} "{1}" {2} {3} {4}'.format(
-                duration, name, volume, pan0, pan1
+            line = 'i1 {5} {0} "{1}" {2} {3} {4}'.format(
+                duration, name, volume, pan0, pan1, start
             )
             lines.append(line)
         return " \n".join(lines)

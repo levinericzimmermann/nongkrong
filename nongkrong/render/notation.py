@@ -201,6 +201,7 @@ class HorizontalLine(object):
         distance = r"\distance" + self.horizontal_line_style.size
         if self.has_label:
             res.append(r"{0} {1}".format(size, self.horizontal_line_style.label))
+
         for idx, unit in enumerate(self.content):
             if type(unit) == MultiColumn:
                 if self.horizontal_line_style.mark_metrical_division:
@@ -510,9 +511,10 @@ class Section(object):
                 return 0
 
             def mk_melodic_lines(instr_idx, instrument_data, vl, instrument, has_label):
+                content = tuple(unit[0] for unit in instrument_data[instr_idx])
                 return (
                     HorizontalLine(
-                        instrument_data[instr_idx][0],
+                        content,
                         vl,
                         instrument.horizontal_line_styles[instr_idx],
                         has_label,

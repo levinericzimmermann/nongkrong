@@ -58,6 +58,9 @@ class Function(object):
         except AttributeError:
             return False
 
+    def __hash__(self) -> int:
+        return hash(self.identity)
+
     @property
     def gong(self) -> bool:
         return self.__gong

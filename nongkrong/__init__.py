@@ -1,3 +1,4 @@
+from nongkrong import algorithms
 from nongkrong import harmony
 from nongkrong import metre
 from nongkrong import render
