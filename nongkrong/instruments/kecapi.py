@@ -39,25 +39,7 @@ def __mk_kecapi(inverse: bool, is_positive: bool):
         return (p0,) + p_inbetween + (p1,)
 
     def mk_re():
-        unavailable_pitches = (
-            30,
-            32,
-            34,
-            42,
-            44,
-            46,
-            73,
-            75,
-            78,
-            80,
-            82,
-            85,
-            87,
-            90,
-            92,
-            94,
-        )
-        harp_range = tuple(n for n in range(20, 110) if n not in unavailable_pitches)
+        harp_range = tuple(range(20, 110))
         se = sound.PyteqEngine(
             preset='"Concert Harp Recording"', available_midi_notes=harp_range
         )

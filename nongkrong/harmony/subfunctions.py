@@ -10,9 +10,7 @@ from mu.mel import mel
 
 class Sign(object):
     _scales = tuple(
-        tuple(
-            sorted(sw.translate("{0} {1}".format(pre, "17 9 19 5 11 3 13 7 1."), False))
-        )
+        tuple(sorted(sw.translate("{0} {1}".format(pre, "9 19 5 11 3 13 7 1."), False)))
         for pre in (r"!+", r"!-")
     )
 
@@ -161,14 +159,23 @@ class InterpolationSign(Sign):
             idx0, idx1 = tuple(reference_scale.index(pitch) for pitch in get_pitches())
             if idx0 > idx1:
                 if is_close:
-                    return reference_scale[idx0 - 1]
+                    new_idx = idx0 - 1
                 else:
-                    return reference_scale[idx0 + 1]
+                    new_idx = idx0 + 1
             else:
                 if is_close:
-                    return reference_scale[idx0 + 1]
+                    new_idx = idx0 + 1
                 else:
-                    return reference_scale[idx0 - 1]
+                    new_idx = idx0 - 1
+
+            try:
+                pitch = reference_scale[new_idx]
+            # that's necessary since 9/8 doesn't have a pitch below it
+            # anymore (17/16 is gone)
+            except IndexError:
+                pitch = reference_scale[new_idx + 2]
+
+            return pitch
 
         Sign.__init__(self, f)
 
@@ -257,6 +264,10 @@ class SubFunction(abc.ABC):
     @abc.abstractproperty
     def nationality(self) -> int:
         raise NotImplementedError
+
+    @property
+    def is_stable(self) -> bool:
+        return self.signifier == self.signified
 
 
 class SubfuncLine(abc.ABC):

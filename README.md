@@ -22,7 +22,7 @@ Instruments of the ensemble may finally include...
 		* one 'siter gong' 
 	* different adapted Sundanese instruments:
 		* two adapted kecapi siter
-		* six Sundanese kendang anak
+		* five Sundanese kendang anak
 	* other:
 		* two bamboo slide flutes
 		* one Burmese bamboo clapper

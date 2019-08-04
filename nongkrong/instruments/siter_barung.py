@@ -12,7 +12,7 @@ def __mk_siter_barung():
     def mk_pitches(inverse=False):
         pitches0 = tuple(ji.r(p ** 2, 1) for p in (3, 5, 7))
         pitches0 += (ji.r(3 ** 3, 1),)
-        pitches1 = tuple(ji.r(p, 1) for p in (17, 9, 5, 11, 3, 7))
+        pitches1 = tuple(ji.r(p, 1) for p in (9, 19, 5, 11, 3, 13, 7))
         pitches2 = tuple(ji.r(1, 1) for p in (1,))
         octaves = (ji.r(1, 2), ji.r(1, 1), ji.r(2, 1))
         pitches = (pitches0, pitches1, pitches2)

@@ -1,4 +1,6 @@
 from nongkrong.harmony import abodefunctions
+from nongkrong.harmony import expansion
+from nongkrong.harmony import expattern
 from nongkrong.harmony import functions
 from nongkrong.harmony import interfunctions
 from nongkrong.harmony import modes

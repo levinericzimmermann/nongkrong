@@ -19,9 +19,5 @@ class LancaranTest(unittest.TestCase):
         meter = metre.define_metre_by_structure(m_structure)
         lnc = lancaran.Lancaran(mode, melody, meter, mode, loopsize)
         cadences = lnc.convert2cadences()
-        print(meter.size)
-        print(cadences[4][0].duration)
 
         assert meter.size == cadences[4][0].duration
-
-        assert 3 is None

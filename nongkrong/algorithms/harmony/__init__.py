@@ -1,3 +1,4 @@
+from nongkrong.algorithms.harmony import expattern
 from nongkrong.algorithms.harmony import functions
 from nongkrong.algorithms.harmony import abodefunctions
 from nongkrong.algorithms.harmony import interfunctions
